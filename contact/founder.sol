@@ -14,7 +14,7 @@ interface IKiss {
 
 //TGE零释放，100% 锁仓一年；接下来每年释放 20%
 //Founders vesting. Clift 1 year; Vesting of 20% per year;
-contract FundersTokenVesting is Initializable,PausableUpgradeable, AccessControlUpgradeable{
+contract FoundersTokenVesting is Initializable,PausableUpgradeable, AccessControlUpgradeable{
 
     using SafeMath for uint256;
 
@@ -30,7 +30,7 @@ contract FundersTokenVesting is Initializable,PausableUpgradeable, AccessControl
     address public releaseAddress; //打币地址
     bool    internal locked = false;//初始化参数锁
 
-    //每年要释放的数量
+    //每年要释放的数量 main release list
     uint256[] internal yearRelease;
 
     event Released(address indexed from,address indexed to,uint256 amount);
@@ -80,17 +80,17 @@ contract FundersTokenVesting is Initializable,PausableUpgradeable, AccessControl
         require(releasedTimes < yearRelease.length,"released end");
         require(_time >= nextTime,"time has locked");  
 
-        uint256 currentRelased = yearRelease[releasedTimes];
-        require(currentRelased > 0,"released than 0");
+        uint256 currentReleased = yearRelease[releasedTimes];
+        require(currentReleased > 0,"released than 0");
 
         uint256 bs = IERC20(token).balanceOf(address(this));
-        require(bs >= currentRelased,"balance less");
+        require(bs >= currentReleased,"balance less");
 
-        SafeERC20.safeTransfer(IERC20(token),msg.sender,currentRelased); 
+        SafeERC20.safeTransfer(IERC20(token),msg.sender,currentReleased);
 
         lastTime = _time;
         nextTime = nextTime.add(cliff);
         releasedTimes = releasedTimes + 1;
-        emit Released(address(this),msg.sender,currentRelased);
+        emit Released(address(this),msg.sender,currentReleased);
     }
 }

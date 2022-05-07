@@ -19,7 +19,7 @@
 | ProxyAdmin | 管理合约 |基础合约|
 | TransparentUpgradeableProxy | 可升级代理合约  |基础合约|
 | UKiss | UKISS ERC20   |主合约|
-| FundersTokenVesting | 发起团队 Founders   |业务合约|
+| FoundersTokenVesting | 发起团队 Founders   |业务合约|
 | AdvisorsTokenVesting | 顾问团，公司主要人员   |业务合约|
 
 
@@ -53,7 +53,7 @@ function mintInit(address[] memory _addresses,uint256[] memory _amounts) public 
 }
 ```
 
-## 4. FundersTokenVesting
+## 4. FoundersTokenVesting
 
 | 类别     | 说明 |
 | ----------  | --------|
@@ -149,12 +149,12 @@ function initParam(address _token,address _owner,uint256 _start,uint256 _onlineL
 
 - ProxyAdmin 管理合约
 - UKiss合约  逻辑合约部署后；部署 TransparentUpgradeableProxy合约执行：deploy方法
-- FundersTokenVesting发起人合约  逻辑合约部署后；部署 TransparentUpgradeableProxy合约执行：deploy方法
+- FoundersTokenVesting发起人合约  逻辑合约部署后；部署 TransparentUpgradeableProxy合约执行：deploy方法
 - AdvisorsTokenVesting顾问团队合约   逻辑合约部署后；部署 TransparentUpgradeableProxy合约执行：deploy方法
 - 执行合约方法:
      
   1. 调用UKiss合约，(整理铸币地址)实现批量铸币
-  2. 调用FundersTokenVesting合约 执行  initParam (初始化参数方法)
+  2. 调用FoundersTokenVesting合约 执行  initParam (初始化参数方法)
   3. 调用AdvisorsTokenVesting合约 执行 initParam (初始化参数方法)
 
 ## 7. 源码

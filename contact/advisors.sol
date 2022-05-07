@@ -92,10 +92,10 @@ contract AdvisorsTokenVesting is Initializable,PausableUpgradeable, AccessContro
         emit Released(address(this),msg.sender,currentReleased);
     }
 
-    function updateReleased(uint256 _idx,uint256 _raleased)public onlyRole(DEFAULT_ADMIN_ROLE){ 
+    function updateReleased(uint256 _idx,uint256 _released)public onlyRole(DEFAULT_ADMIN_ROLE){
         require(_idx >= 1 && _idx <= releasedArr.length,"out of length"); 
         uint8 dc = IKiss(token).decimals();
-        releasedArr[_idx-1] = _raleased*10**dc;
+        releasedArr[_idx-1] = _released*10**dc;
     }
 
     function getReleased(uint256 _idx)public view onlyRole(DEFAULT_ADMIN_ROLE) returns(uint256){ 
