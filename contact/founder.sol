@@ -1,96 +1,122 @@
 // contracts/GLDToken.sol
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts@4.5.0/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts@4.5.0/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable@4.5.0/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable@4.5.0/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable@4.5.0/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable@4.5.0/security/ReentrancyGuardUpgradeable.sol";
 
-interface IKiss {
-	function decimals() external view returns (uint8);
+contract FundersTokenVestingStorageV1{
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    address internal token;           //UKiss Token
+    address internal releaseAddress;  //founders released address
+    uint256 internal start;           //TGE time,Unit s
+    uint256 internal cliff;           //vesting period,Unit s
+    uint256 internal releasedTimes;   //total number of releases
+    bool    internal locked = false;  //initParam method excute once lock statu;
+    uint256[5] internal yearRelease;  //The number to be released each year
+
+    uint256 public lastTime;          //last release time,Unit s
+    uint256 public nextTime;          //next release time,Unit s
 }
 
-//TGE零释放，100% 锁仓一年；接下来每年释放 20%
 //Founders vesting. Clift 1 year; Vesting of 20% per year;
-contract FoundersTokenVesting is Initializable,PausableUpgradeable, AccessControlUpgradeable{
+contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable{
 
     using SafeMath for uint256;
 
-    //管理者权限
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    //bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
-    uint256 public start;         //起始时间(s),上线开始时间
-    uint256 public cliff;         //单位为秒(s)，锁仓间隔时间1年 = 365*24*60*60
-    uint256 public releasedTimes; //累计已的释放次数
-    uint256 public lastTime;      //上一次释放时间
-    uint256 public nextTime;      //下一次领取时间
-    address public token;         //合约地址
-    address public releaseAddress; //打币地址
-    bool    internal locked = false;//初始化参数锁
+    //address internal token;           //UKiss Token
+    //address internal releaseAddress;  //founders released address
+    //uint256 internal start;           //TGE time,Unit s
+    //uint256 internal cliff;           //vesting period,Unit s
+    //uint256 internal releasedTimes;   //total number of releases
+    //bool    internal locked = false;  //initParam method excute once lock statu;
+    //The number to be released each year
+    //uint256[] internal yearRelease;
 
-    //每年要释放的数量 main release list
-    uint256[] internal yearRelease;
+    //uint256 public lastTime;        //last release time,Unit s
+    //uint256 public nextTime;        //next release time,Unit s
 
-    event Released(address indexed from,address indexed to,uint256 amount);
+    event FundersReleased(address indexed from,address indexed to,uint256 amount);
 
     function initialize()public initializer{
-		__Pausable_init();
         __AccessControl_init();
-        //初始化操作者权限
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); 
-	}
+        __Pausable_init();
+        __ReentrancyGuard_init();
 
-    function updateYearRelease(uint256 _idx,uint256 _released)public onlyRole(DEFAULT_ADMIN_ROLE){ 
-        require(_idx >= 1 && _idx <= yearRelease.length,"out of length"); 
-        uint8 dc = IKiss(token).decimals();
-        yearRelease[_idx-1] = _released*10**dc ;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender);
     }
 
-    function getYearRelease(uint256 _idx)public view onlyRole(DEFAULT_ADMIN_ROLE) returns(uint256){ 
-        require(_idx >= 1 && _idx <= yearRelease.length,"out of length"); 
-        return yearRelease[_idx-1];
-    }
+    function initParam(address _token,address _owner,uint256 _start) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(!locked,"Funders: repeated execute");
+        require(_token != address(0) && _token != address(this),"Funders: bad Ukiss token");
+        require(_owner != address(0) && _owner != address(this),"Funders: bad release address");
 
-    //初始化参数，并且只能初始化一次
-    function initParam(address _token,address _owner,uint256 _start,uint256 _cliff,uint256[] memory _released) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(!locked,"param is init");
-        require(_token != address(0) && _token != address(this),"address not 0 or this");
         token = _token;
+        releaseAddress = _owner;
         start = _start;
-        cliff = _cliff;
-        uint8 dc = IKiss(token).decimals();
-        for(uint256 i=0;i<_released.length;i++){
-            yearRelease.push(_released[i]*10**dc);
-        }
+
+        cliff = 31536000;
+        nextTime = start.add(cliff);
         releasedTimes = 0;
         lastTime = 0;
-        nextTime = start.add(cliff);
-        //释放调用权限
-        _grantRole(PAUSER_ROLE, _owner); 
-        releaseAddress = _owner;
+        yearRelease = [3600000000000000000000000,3600000000000000000000000,3600000000000000000000000,
+        3600000000000000000000000,3600000000000000000000000];
+
         locked = true;
     }
 
-    function release() public onlyRole(PAUSER_ROLE) {
+    function release() external whenNotPaused() nonReentrant {
         uint256 _time = block.timestamp;
-
-        require(releaseAddress == msg.sender,"not owner"); 
-        require(releasedTimes < yearRelease.length,"released end");
-        require(_time >= nextTime,"time has locked");  
+        require(releaseAddress == msg.sender,"Funders: not owner");
+        require(releasedTimes < yearRelease.length,"Funders: released times end");
+        require(_time >= nextTime,"Funders: release date is not yet reached");
 
         uint256 currentReleased = yearRelease[releasedTimes];
-        require(currentReleased > 0,"released than 0");
+        require(currentReleased > 0,"Funders: bad release value");
 
         uint256 bs = IERC20(token).balanceOf(address(this));
-        require(bs >= currentReleased,"balance less");
+        require(bs >= currentReleased,"Funders: inffulunce balance");
 
         SafeERC20.safeTransfer(IERC20(token),msg.sender,currentReleased);
 
         lastTime = _time;
         nextTime = nextTime.add(cliff);
         releasedTimes = releasedTimes + 1;
-        emit Released(address(this),msg.sender,currentReleased);
+
+        emit FundersReleased(address(this),msg.sender,currentReleased);
+    }
+
+    function pause() public virtual onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() public virtual onlyRole(PAUSER_ROLE) {
+        _unpause();
+    }
+
+    function unReleased() public view returns(uint256){
+        require(releaseAddress == msg.sender,"Funders: not owner");
+        uint256 rs = 0;
+        for(uint256 i = releasedTimes;i < yearRelease.length;i++){
+            rs = rs.add(yearRelease[i]);
+        }
+        return rs;
+    }
+
+    function released() public view returns(uint256){
+        require(releaseAddress == msg.sender,"Funders: not owner");
+        uint256 rs = 0;
+        for(uint256 i = 0;i < releasedTimes;i++){
+            rs = rs.add(yearRelease[i]);
+        }
+        return rs;
     }
 }
