@@ -12,6 +12,9 @@ import "@openzeppelin/contracts-upgradeable@4.5.0/security/ReentrancyGuardUpgrad
 
 contract AdvisorsTokenVestingStorageV1{
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    uint256 public lastTime;                //last release time,Unit s
+    uint256 public nextTime;                //next release time,Unit s
+
     address internal token;                 //UKiss Token
     address internal releasedAddress;       //advisors released address
     uint8   internal releaseTimes;          //total number of releases
@@ -21,27 +24,11 @@ contract AdvisorsTokenVestingStorageV1{
     uint256 internal duration;              //vesting period,Unit s
     bool    internal locked = false;        //initParam method excute once lock statu;
     uint256[7] internal releasedArr;        //main release list
-    uint256 public lastTime;                //last release time,Unit s
-    uint256 public nextTime;                //next release time,Unit s
 }
 
 // Clift 6 months after TGE, then release 4%; followed by 16% every 6 months;
 contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable{
     using SafeMath for uint256;
-
-    //bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-
-    //address internal token;                 //UKiss Token
-    //address internal releasedAddress;       //advisors released address
-    //uint8   internal releaseTimes;          //total number of releases
-    //uint256 internal start;                 //TGE time,Unit s
-    //uint256 internal afterTgeDuration;      //clift 6 months after TGE,Unit s
-    //uint256 internal remainDuration;        //ockin period in seconds,Unit s
-    //uint256 internal duration;              //vesting period,Unit s
-    //bool    internal locked = false;        //initParam method excute once lock statu;
-    //uint256[] internal releasedArr;         //main release list
-    //uint256 public lastTime;                //last release time,Unit s
-    //uint256 public nextTime;                //next release time,Unit s
 
     event AdvisorsReleased(address indexed from,address indexed to,uint256 amount);
 
@@ -55,9 +42,9 @@ contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,Pa
     }
 
     function initParam(address _token,address _owner,uint256 _start) external onlyRole(DEFAULT_ADMIN_ROLE){
-        require(!locked,"Advisors: repeated execute");
-        require(_token != address(0) && _token != address(this),"Advisors: bad UKiss token");
-        require(_owner != address(0) && _owner != address(this),"Advisors: bad release address");
+        require(!locked,"Advisors: Parameters are already initialized");
+        require(_token != address(0) && _token != address(this),"Advisors: Token address cannot be 0 address or this contract address");
+        require(_owner != address(0) && _owner != address(this),"Advisors: Owner address cannot be 0 address or this contract address");
 
         token = _token;
         releasedAddress = _owner;
@@ -79,15 +66,15 @@ contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,Pa
 
     function release() external whenNotPaused() nonReentrant{
         uint256 _time = block.timestamp;
-        require(releasedAddress == msg.sender,"Advisors: not owner");
-        require(releaseTimes < releasedArr.length,"Advisors: released times end");
-        require(_time >= nextTime,"Advisors: release date is not yet reached");
+        require(releasedAddress == msg.sender,"Advisors: Not owner");
+        require(releaseTimes < releasedArr.length,"Advisors: Release has ended");
+        require(_time >= nextTime,"Advisors: Current time is less than next release time");
 
         uint256 currentReleased = releasedArr[releaseTimes];
-        require(currentReleased > 0,"Advisors: bad release value");
+        require(currentReleased > 0,"Advisors: Release must be greater than 0");
 
         uint256 bs = IERC20(token).balanceOf(address(this));
-        require(bs >= currentReleased,"Advisors: inffulunce balance");
+        require(bs >= currentReleased,"Advisors: Contract balance is less than current release");
 
         SafeERC20.safeTransfer(IERC20(token),msg.sender,currentReleased);
 
@@ -112,7 +99,7 @@ contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,Pa
 
 
     function unReleased() public view returns(uint256){
-        require(releasedAddress == msg.sender,"Advisors: not owner");
+        require(releasedAddress == msg.sender,"Advisors: Not owner");
         uint256 rs = 0;
         for(uint256 i = releaseTimes;i < releasedArr.length;i++){
             rs = rs.add(releasedArr[i]);
@@ -121,7 +108,7 @@ contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,Pa
     }
 
     function released() public view returns(uint256){
-        require(releasedAddress == msg.sender,"Advisors: not owner");
+        require(releasedAddress == msg.sender,"Advisors: Not owner");
         uint256 rs = 0;
         for(uint256 i = 0;i < releaseTimes;i++){
             rs = rs.add(releasedArr[i]);

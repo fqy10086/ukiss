@@ -48,13 +48,13 @@ contract UKiss is UKissStorageV1, Initializable, ERC20Upgradeable,PausableUpgrad
 
     //mint ukiss
     function mutilMint(address[] memory _addresses,uint256[] memory _amounts) external onlyRole(MINTER_ROLE){
-        require(_addresses.length > 0 && _amounts.length > 0 && _addresses.length == _amounts.length,"UKiss:the array lengths are not equal");
-        require(hasMint < maxMint,"UKiss: exceed max value");
+        require(_addresses.length > 0 && _amounts.length > 0 && _addresses.length == _amounts.length,"UKiss: Address length and amounts length do not match");
+        require(hasMint < maxMint,"UKiss: Mint more than totalSupply");
         for(uint256 i = 0; i < _addresses.length; i++){
-            require(_addresses[i] != address(0) && _addresses[i] != address(this),"UKiss:bad mint address");
-            require(_amounts[i] > 0,"UKiss:cannot mint zero value");
+            require(_addresses[i] != address(0) && _addresses[i] != address(this),"UKiss: Address cannot be 0 address or this contract address");
+            require(_amounts[i] > 0,"UKiss: Mint value must be greater than 0");
             uint256 mintVal = _amounts[i]*1e18;
-            require((hasMint + mintVal) <= maxMint,"UKiss: exceed max value");
+            require((hasMint + mintVal) <= maxMint,"UKiss: Mint more than totalSupply");
             _mint(_addresses[i], mintVal);
             hasMint = hasMint + mintVal;
         }
