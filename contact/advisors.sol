@@ -31,6 +31,7 @@ contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,Pa
     using SafeMath for uint256;
 
     event AdvisorsReleased(address indexed from,address indexed to,uint256 amount);
+    event AdvisorsInit(address indexed from,address indexed to,uint256 amount);
 
     function initialize()public initializer{
         __AccessControl_init();
@@ -61,6 +62,7 @@ contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,Pa
         800000000000000000000000,800000000000000000000000,800000000000000000000000,800000000000000000000000];
 
         locked = true;
+        emit AdvisorsInit(msg.sender,address(this),0);
     }
 
 

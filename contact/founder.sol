@@ -29,6 +29,8 @@ contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,Pausa
     using SafeMath for uint256;
 
     event FundersReleased(address indexed from,address indexed to,uint256 amount);
+    event FundersInit(address indexed from,address indexed to,uint256 amount);
+
 
     function initialize()public initializer{
         __AccessControl_init();
@@ -56,6 +58,7 @@ contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,Pausa
         3600000000000000000000000,3600000000000000000000000];
 
         locked = true;
+        emit FundersInit(msg.sender,address(this),0);
     }
 
     function release() external whenNotPaused() nonReentrant {

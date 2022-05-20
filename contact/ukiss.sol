@@ -14,7 +14,7 @@ contract UKissStorageV1{
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     uint256 internal maxMint;           //mint max value of Ukiss
-    uint256 internal hasMint;           //aleadly mint value of Ukiss
+    uint256 internal hasMint;           //already mint value of Ukiss
 }
 
 /*
