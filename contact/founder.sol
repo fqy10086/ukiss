@@ -19,33 +19,29 @@ contract FundersTokenVestingStorageV1{
     uint256 internal start;           //TGE time,Unit s
     uint256 internal cliff;           //vesting period,Unit s
     uint256 internal releasedTimes;   //total number of releases
-    bool    internal locked = false;  //initParam method excute once lock statu;
     uint256[5] internal yearRelease;  //The number to be released each year
+    uint256[50] private __gap;        //
 }
 
 //Founders vesting. Clift 1 year; Vesting of 20% per year;
-contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable{
+contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,ContextUpgradeable,PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable{
 
     using SafeMath for uint256;
 
     event FundersReleased(address indexed from,address indexed to,uint256 amount);
-    event FundersInit(address indexed from,address indexed to,uint256 amount);
 
-
-    function initialize()public initializer{
-        __AccessControl_init();
-        __Pausable_init();
-        __ReentrancyGuard_init();
-
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(PAUSER_ROLE, msg.sender);
-    }
-
-    function initParam(address _token,address _owner,uint256 _start) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(!locked,"Funders: Parameters are already initialized");
+    function initialize(address _token,address _owner,uint256 _start)public initializer{
         require(_token != address(0) && _token != address(this),"Funders: Token address cannot be 0 address or this contract address");
         require(_owner != address(0) && _owner != address(this),"Funders: Owner address cannot be 0 address or this contract address");
 
+        __Context_init_unchained();
+        __AccessControl_init_unchained();
+        __Pausable_init_unchained();
+        __ReentrancyGuard_init_unchained();
+
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender);
+        
         token = _token;
         releaseAddress = _owner;
         start = _start;
@@ -56,9 +52,6 @@ contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,Pausa
         lastTime = 0;
         yearRelease = [3600000000000000000000000,3600000000000000000000000,3600000000000000000000000,
         3600000000000000000000000,3600000000000000000000000];
-
-        locked = true;
-        emit FundersInit(msg.sender,address(this),0);
     }
 
     function release() external whenNotPaused() nonReentrant {

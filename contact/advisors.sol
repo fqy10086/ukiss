@@ -22,28 +22,25 @@ contract AdvisorsTokenVestingStorageV1{
     uint256 internal afterTgeDuration;      //clift 6 months after TGE,Unit s
     uint256 internal remainDuration;        //ockin period in seconds,Unit s
     uint256 internal duration;              //vesting period,Unit s
-    bool    internal locked = false;        //initParam method excute once lock statu;
     uint256[7] internal releasedArr;        //main release list
+    uint256[50] private __gap;              //
 }
 
 // Clift 6 months after TGE, then release 4%; followed by 16% every 6 months;
-contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable{
+contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,ContextUpgradeable,PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable{
     using SafeMath for uint256;
 
     event AdvisorsReleased(address indexed from,address indexed to,uint256 amount);
-    event AdvisorsInit(address indexed from,address indexed to,uint256 amount);
 
-    function initialize()public initializer{
-        __AccessControl_init();
-        __Pausable_init();
-        __ReentrancyGuard_init();
+    function initialize(address _token,address _owner,uint256 _start)public initializer{
+        __Context_init_unchained();
+        __AccessControl_init_unchained();
+        __Pausable_init_unchained();
+        __ReentrancyGuard_init_unchained();
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
-    }
 
-    function initParam(address _token,address _owner,uint256 _start) external onlyRole(DEFAULT_ADMIN_ROLE){
-        require(!locked,"Advisors: Parameters are already initialized");
         require(_token != address(0) && _token != address(this),"Advisors: Token address cannot be 0 address or this contract address");
         require(_owner != address(0) && _owner != address(this),"Advisors: Owner address cannot be 0 address or this contract address");
 
@@ -60,12 +57,9 @@ contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,Pa
 
         releasedArr = [200000000000000000000000,800000000000000000000000,800000000000000000000000,
         800000000000000000000000,800000000000000000000000,800000000000000000000000,800000000000000000000000];
-
-        locked = true;
-        emit AdvisorsInit(msg.sender,address(this),0);
     }
 
-
+    
     function release() external whenNotPaused() nonReentrant{
         uint256 _time = block.timestamp;
         require(releasedAddress == msg.sender,"Advisors: Not owner");
