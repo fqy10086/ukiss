@@ -33,6 +33,9 @@ contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,Co
     event AdvisorsReleased(address indexed from,address indexed to,uint256 amount);
 
     function initialize(address _token,address _owner,uint256 _start)public initializer{
+        require(_token != address(0) && _token != address(this),"Advisors: Token address cannot be 0 address or this contract address");
+        require(_owner != address(0) && _owner != address(this),"Advisors: Owner address cannot be 0 address or this contract address");
+
         __Context_init_unchained();
         __AccessControl_init_unchained();
         __Pausable_init_unchained();
@@ -40,9 +43,6 @@ contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,Co
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
-
-        require(_token != address(0) && _token != address(this),"Advisors: Token address cannot be 0 address or this contract address");
-        require(_owner != address(0) && _owner != address(this),"Advisors: Owner address cannot be 0 address or this contract address");
 
         token = _token;
         releasedAddress = _owner;
