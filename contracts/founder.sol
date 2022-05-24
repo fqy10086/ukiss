@@ -1,4 +1,3 @@
-// contracts/GLDToken.sol
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
@@ -9,13 +8,13 @@ import "@openzeppelin/contracts-upgradeable@4.5.0/security/PausableUpgradeable.s
 import "@openzeppelin/contracts-upgradeable@4.5.0/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable@4.5.0/security/ReentrancyGuardUpgradeable.sol";
 
-contract FundersTokenVestingStorageV1{
+contract FoundersTokenVestingStorageV1{
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     uint256 public lastTime;          //last release time,Unit s
     uint256 public nextTime;          //next release time,Unit s
 
     address internal token;           //UKiss Token
-    address internal releaseAddress;  //founders released address
+    address internal releaseAddress;  //Founders released address
     uint256 internal start;           //TGE time,Unit s
     uint256 internal cliff;           //vesting period,Unit s
     uint256 internal releasedTimes;   //total number of releases
@@ -24,15 +23,15 @@ contract FundersTokenVestingStorageV1{
 }
 
 //Founders vesting. Clift 1 year; Vesting of 20% per year;
-contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,ContextUpgradeable,PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable{
+contract FoundersTokenVesting is FoundersTokenVestingStorageV1,Initializable,ContextUpgradeable,PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable{
 
     using SafeMath for uint256;
 
-    event FundersReleased(address indexed from,address indexed to,uint256 amount);
+    event FoundersReleased(address indexed from,address indexed to,uint256 val);
 
-    function initialize(address _token,address _owner,uint256 _start)public initializer{
-        require(_token != address(0) && _token != address(this),"Funders: Token address cannot be 0 address or this contract address");
-        require(_owner != address(0) && _owner != address(this),"Funders: Owner address cannot be 0 address or this contract address");
+    function initialize(address _token,address _releaseAddress,uint256 _start)public initializer{
+        require(_token != address(0) && _token != address(this),"Founders: Token address cannot be 0 address or this contract address");
+        require(_releaseAddress != address(0) && _releaseAddress != address(this),"Founders: Release address cannot be 0 address or this contract address");
 
         __Context_init_unchained();
         __AccessControl_init_unchained();
@@ -43,7 +42,7 @@ contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,Conte
         _grantRole(PAUSER_ROLE, msg.sender);
         
         token = _token;
-        releaseAddress = _owner;
+        releaseAddress = _releaseAddress;
         start = _start;
 
         cliff = 31536000;
@@ -56,15 +55,15 @@ contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,Conte
 
     function release() external whenNotPaused() nonReentrant {
         uint256 _time = block.timestamp;
-        require(releaseAddress == msg.sender,"Funders: Not owner");
-        require(releasedTimes < yearRelease.length,"Funders: Release has ended");
-        require(_time >= nextTime,"Funders: Current time is less than next release time");
+        require(releaseAddress == msg.sender,"Founders: Not owner");
+        require(releasedTimes < yearRelease.length,"Founders: Release has ended");
+        require(_time >= nextTime,"Founders: Current time is less than next release time");
 
         uint256 currentReleased = yearRelease[releasedTimes];
-        require(currentReleased > 0,"Funders: Release must be greater than 0");
+        require(currentReleased > 0,"Founders: Release must be greater than 0");
 
         uint256 bs = IERC20(token).balanceOf(address(this));
-        require(bs >= currentReleased,"Funders: Contract balance is less than current release");
+        require(bs >= currentReleased,"Founders: Contract balance is less than current release");
 
         SafeERC20.safeTransfer(IERC20(token),msg.sender,currentReleased);
 
@@ -72,7 +71,7 @@ contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,Conte
         nextTime = nextTime.add(cliff);
         releasedTimes = releasedTimes + 1;
 
-        emit FundersReleased(address(this),msg.sender,currentReleased);
+        emit FoundersReleased(address(this),msg.sender,currentReleased);
     }
 
     function pause() public virtual onlyRole(PAUSER_ROLE) {
@@ -84,7 +83,7 @@ contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,Conte
     }
 
     function unReleased() public view returns(uint256){
-        require(releaseAddress == msg.sender,"Funders: Not owner");
+        require(releaseAddress == msg.sender,"Founders: Not owner");
         uint256 rs = 0;
         for(uint256 i = releasedTimes;i < yearRelease.length;i++){
             rs = rs.add(yearRelease[i]);
@@ -93,7 +92,7 @@ contract FundersTokenVesting is FundersTokenVestingStorageV1,Initializable,Conte
     }
 
     function released() public view returns(uint256){
-        require(releaseAddress == msg.sender,"Funders: Not owner");
+        require(releaseAddress == msg.sender,"Founders: Not owner");
         uint256 rs = 0;
         for(uint256 i = 0;i < releasedTimes;i++){
             rs = rs.add(yearRelease[i]);

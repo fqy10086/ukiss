@@ -1,4 +1,3 @@
-// contracts/GLDToken.sol
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
@@ -19,22 +18,22 @@ contract AdvisorsTokenVestingStorageV1{
     address internal releasedAddress;       //advisors released address
     uint8   internal releaseTimes;          //total number of releases
     uint256 internal start;                 //TGE time,Unit s
-    uint256 internal afterTgeDuration;      //clift 6 months after TGE,Unit s
-    uint256 internal remainDuration;        //ockin period in seconds,Unit s
+    uint256 internal afterTgeDuration;      //cliff 6 months after TGE,Unit s
+    uint256 internal remainDuration;        //lockin period in seconds,Unit s
     uint256 internal duration;              //vesting period,Unit s
     uint256[7] internal releasedArr;        //main release list
     uint256[50] private __gap;              //
 }
 
-// Clift 6 months after TGE, then release 4%; followed by 16% every 6 months;
+// Cliff 6 months after TGE, then release 4%; followed by 16% every 6 months;
 contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,ContextUpgradeable,PausableUpgradeable, AccessControlUpgradeable,ReentrancyGuardUpgradeable{
     using SafeMath for uint256;
 
-    event AdvisorsReleased(address indexed from,address indexed to,uint256 amount);
+    event AdvisorsReleased(address indexed from,address indexed to,uint256 val);
 
-    function initialize(address _token,address _owner,uint256 _start)public initializer{
+    function initialize(address _token,address _releasedAddress,uint256 _start)public initializer{
         require(_token != address(0) && _token != address(this),"Advisors: Token address cannot be 0 address or this contract address");
-        require(_owner != address(0) && _owner != address(this),"Advisors: Owner address cannot be 0 address or this contract address");
+        require(_releasedAddress != address(0) && _releasedAddress != address(this),"Advisors: Release address cannot be 0 address or this contract address");
 
         __Context_init_unchained();
         __AccessControl_init_unchained();
@@ -45,12 +44,12 @@ contract AdvisorsTokenVesting is AdvisorsTokenVestingStorageV1, Initializable,Co
         _grantRole(PAUSER_ROLE, msg.sender);
 
         token = _token;
-        releasedAddress = _owner;
+        releasedAddress = _releasedAddress;
         start = _start;
 
-        afterTgeDuration = 15768000; //6 mouth
-        remainDuration = 15768000; //6 mouth
-        duration = 15768000; // 6 mouth
+        afterTgeDuration = 15768000;
+        remainDuration = 15768000;
+        duration = 15768000;
         releaseTimes = 0;
         lastTime = 0;
         nextTime = start.add(afterTgeDuration);
